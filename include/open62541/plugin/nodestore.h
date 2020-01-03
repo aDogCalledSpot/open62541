@@ -453,6 +453,15 @@ typedef struct {
     void *context;
     void (*clear)(void *nsCtx);
 
+    /* This should be set if the nodestore does not need to initialize the
+     * nodestore when the server starts up. A possible use case for this
+     * would be having a backend (such as a database) which already has the nodes stored */
+    UA_Boolean dontInitNS0;
+
+    /* If the ns0 should not be initialized the nodestore should set the namespaces
+     * This function does not need to be set if dontInitNS0 is set to false */
+    UA_String * (*setNamespaces)(void *nsCtx);
+
     /* The following definitions are used to create empty nodes of the different
      * node types. The memory is managed by the nodestore. Therefore, the node
      * has to be removed via a special deleteNode function. (If the new node is

@@ -279,14 +279,22 @@ UA_Server_init(UA_Server *server) {
 
     /* Create Namespaces 0 and 1
      * Ns1 will be filled later with the uri from the app description */
-    server->namespaces = (UA_String *)UA_Array_new(2, &UA_TYPES[UA_TYPES_STRING]);
-    if(!server->namespaces) {
-        UA_Server_delete(server);
-        return NULL;
+    if (!server->config.nodestore.dontInitNS0) {
+        server->namespaces = (UA_String *) UA_Array_new(2, &UA_TYPES[UA_TYPES_STRING]);
+        if (!server->namespaces) {
+            UA_Server_delete(server);
+            return NULL;
+        }
+        server->namespaces[0] = UA_STRING_ALLOC("http://opcfoundation.org/UA/");
+        server->namespaces[1] = UA_STRING_NULL;
+        server->namespacesSize = 2;
+    } else {
+        server->namespaces = server->config.nodestore.setNamespaces(server->config.nodestore.context);
+        if (!server->namespaces) {
+            UA_Server_delete(server);
+            return NULL;
+        }
     }
-    server->namespaces[0] = UA_STRING_ALLOC("http://opcfoundation.org/UA/");
-    server->namespaces[1] = UA_STRING_NULL;
-    server->namespacesSize = 2;
 
     /* Initialized SecureChannel and Session managers */
     UA_SecureChannelManager_init(&server->secureChannelManager, server);
@@ -301,9 +309,11 @@ UA_Server_init(UA_Server *server) {
                                   10000.0, NULL);
 
     /* Initialize namespace 0*/
-    res = UA_Server_initNS0(server);
-    if(res != UA_STATUSCODE_GOOD)
-        goto cleanup;
+    if (!server->config.nodestore.dontInitNS0) {
+        res = UA_Server_initNS0(server);
+        if (res != UA_STATUSCODE_GOOD)
+            goto cleanup;
+    }
 
     /* Build PubSub information model */
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
